@@ -35,7 +35,7 @@ const authController = {
       const token = jwt.sign(
         { id: user.id, phone: user.phone },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
 
       res.status(201).json({
@@ -72,7 +72,7 @@ const authController = {
       const token = jwt.sign(
         { id: user.id, phone: user.phone },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
 
       res.json({
