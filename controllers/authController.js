@@ -6,7 +6,7 @@ const pool = require('../database/db');
 exports.register = async (req, res) => {
     const { name, phone, password, matricule } = req.body;
     
-    console.log('📝 Tentative inscription:', { name, phone, matricule });
+    console.log('📝 Tentative inscription:', { name, phone });
 
     try {
         // Vérifier si l'utilisateur existe
@@ -22,18 +22,12 @@ exports.register = async (req, res) => {
         // Hasher le mot de passe
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Créer l'utilisateur (le trigger créera automatiquement le wallet)
+        // Créer l'utilisateur
         const newUser = await pool.query(
             `INSERT INTO users (name, phone, pin_hash, matricule) 
              VALUES ($1, $2, $3, $4) 
-             RETURNING id, name, phone, matricule, is_verified`,
+             RETURNING id, name, phone, matricule`,
             [name, phone, hashedPassword, matricule || null]
-        );
-
-        // Récupérer le wallet
-        const wallet = await pool.query(
-            'SELECT balance_fc, balance_usd FROM wallets WHERE user_id = $1',
-            [newUser.rows[0].id]
         );
 
         // Générer le token
@@ -48,14 +42,7 @@ exports.register = async (req, res) => {
         res.json({
             success: true,
             token,
-            user: {
-                id: newUser.rows[0].id,
-                name: newUser.rows[0].name,
-                phone: newUser.rows[0].phone,
-                matricule: newUser.rows[0].matricule,
-                balance_fc: wallet.rows[0]?.balance_fc || 0,
-                balance_usd: wallet.rows[0]?.balance_usd || 0
-            }
+            user: newUser.rows[0]
         });
     } catch (error) {
         console.error('❌ Erreur inscription:', error);
@@ -84,12 +71,6 @@ exports.login = async (req, res) => {
             return res.status(401).json({ error: 'Identifiants invalides' });
         }
 
-        // Récupérer le wallet
-        const wallet = await pool.query(
-            'SELECT balance_fc, balance_usd FROM wallets WHERE user_id = $1',
-            [user.rows[0].id]
-        );
-
         const token = jwt.sign(
             { id: user.rows[0].id, phone: phone, name: user.rows[0].name },
             process.env.JWT_SECRET,
@@ -105,9 +86,7 @@ exports.login = async (req, res) => {
                 id: user.rows[0].id,
                 name: user.rows[0].name,
                 phone: user.rows[0].phone,
-                matricule: user.rows[0].matricule,
-                balance_fc: wallet.rows[0]?.balance_fc || 0,
-                balance_usd: wallet.rows[0]?.balance_usd || 0
+                matricule: user.rows[0].matricule
             }
         });
     } catch (error) {
