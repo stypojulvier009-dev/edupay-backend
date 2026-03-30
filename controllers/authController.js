@@ -1,16 +1,21 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const pool = require('../config/database');
 
 const authController = {
-  // Inscription
   register: async (req, res) => {
     try {
+      console.log('📝 Données reçues:', req.body);
+      
       const { name, phone, matricule, pin } = req.body;
 
+      if (!name || !phone || !pin) {
+        return res.status(400).json({ message: 'Champs manquants: name, phone, pin requis' });
+      }
+
       // Vérifier si l'utilisateur existe déjà
-      const existingUser = await User.findByPhone(phone);
-      if (existingUser) {
+      const existingUser = await pool.query('SELECT * FROM users WHERE phone = $1', [phone]);
+      if (existingUser.rows.length > 0) {
         return res.status(400).json({ message: 'Ce numéro est déjà utilisé' });
       }
 
@@ -19,7 +24,12 @@ const authController = {
       const pin_hash = await bcrypt.hash(pin, salt);
 
       // Créer l'utilisateur
-      const user = await User.create({ name, phone, matricule, pin_hash });
+      const result = await pool.query(
+        'INSERT INTO users (name, phone, matricule, pin_hash) VALUES ($1, $2, $3, $4) RETURNING id, name, phone, matricule',
+        [name, phone, matricule, pin_hash]
+      );
+      
+      const user = result.rows[0];
 
       // Générer le token JWT
       const token = jwt.sign(
@@ -34,29 +44,31 @@ const authController = {
         data: { user, token }
       });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Erreur serveur' });
+      console.error('❌ Erreur:', error);
+      res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
   },
 
-  // Connexion
   login: async (req, res) => {
     try {
       const { phone, pin } = req.body;
 
-      // Vérifier si l'utilisateur existe
-      const user = await User.findByPhone(phone);
+      if (!phone || !pin) {
+        return res.status(400).json({ message: 'Champs manquants: phone, pin requis' });
+      }
+
+      const result = await pool.query('SELECT * FROM users WHERE phone = $1', [phone]);
+      const user = result.rows[0];
+
       if (!user) {
         return res.status(401).json({ message: 'Numéro ou PIN incorrect' });
       }
 
-      // Vérifier le PIN
       const validPin = await bcrypt.compare(pin, user.pin_hash);
       if (!validPin) {
         return res.status(401).json({ message: 'Numéro ou PIN incorrect' });
       }
 
-      // Générer le token JWT
       const token = jwt.sign(
         { id: user.id, phone: user.phone },
         process.env.JWT_SECRET,
@@ -77,8 +89,8 @@ const authController = {
         }
       });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Erreur serveur' });
+      console.error('❌ Erreur:', error);
+      res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
   }
 };
