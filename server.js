@@ -1,25 +1,54 @@
-﻿const express = require('express');
-const cors = require('cors');
 require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/wallet', require('./routes/walletRoutes'));
-app.use('/api/payment', require('./routes/paymentRoutes'));
-
-// Route de test
-app.get('/', (req, res) => {
-  res.json({ message: 'API EduPay fonctionne !' });
+// Logging
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
 });
 
-// Démarrer le serveur
-app.listen(port, '0.0.0.0', () => {
-  console.log(`🚀 Serveur démarré sur http://0.0.0.0:${port}`);
+// Routes
+const authRoutes = require('./routes/authRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+
+// Routes publiques
+app.use('/api/auth', authRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        message: 'EduPay API is running',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Route racine
+app.get('/', (req, res) => {
+    res.json({ 
+        name: 'EduPay API',
+        version: '1.0.0',
+        status: 'online'
+    });
+});
+
+// Routes protégées (à décommenter quand auth fonctionne)
+// const auth = require('./middleware/auth');
+// app.use('/api/payments', auth, paymentRoutes);
+
+// 404 handler
+app.use('*', (req, res) => {
+    res.status(404).json({ error: 'Route non trouvée' });
+});
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+    console.log(`✅ Serveur EduPay démarré sur le port ${PORT}`);
 });
