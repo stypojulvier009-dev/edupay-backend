@@ -1,76 +1,79 @@
-const pool = require('../config/database');
+const pool = require('../database/db');
 
-const paymentController = {
-  // Effectuer un paiement
-  makePayment: async (req, res) => {
+// Créer un paiement
+exports.createPayment = async (req, res) => {
+    const { studentId, studentName, amount, operator, phoneNumber, description } = req.body;
+    
+    console.log('💰 Paiement reçu:', { studentId, studentName, amount, operator });
+    
     try {
-      const userId = req.user.id;
-      const { amount_fc, provider, phone_number, description } = req.body;
-
-      if (!amount_fc || amount_fc <= 0) {
-        return res.status(400).json({ message: 'Montant invalide' });
-      }
-
-      // Vérifier le solde
-      const wallet = await pool.query(
-        'SELECT balance_fc FROM wallets WHERE user_id = $1',
-        [userId]
-      );
-
-      if (wallet.rows[0].balance_fc < amount_fc) {
-        return res.status(400).json({ message: 'Solde insuffisant' });
-      }
-
-      const amount_usd = amount_fc / process.env.EXCHANGE_RATE;
-      const reference = `PAY_${Date.now()}_${userId}`;
-
-      // Débiter le wallet
-      await pool.query(
-        'UPDATE wallets SET balance_fc = balance_fc - $1, balance_usd = balance_usd - $2, updated_at = NOW() WHERE user_id = $3',
-        [amount_fc, amount_usd, userId]
-      );
-
-      // Enregistrer la transaction
-      await pool.query(
-        `INSERT INTO transactions (user_id, amount_fc, amount_usd, type, status, provider, phone_number, reference, description)
-         VALUES ($1, $2, $3, 'payment', 'success', $4, $5, $6, $7)`,
-        [userId, amount_fc, amount_usd, provider, phone_number, reference, description || 'Paiement effectué']
-      );
-
-      res.json({
-        success: true,
-        message: 'Paiement effectué avec succès',
-        data: { amount_fc, amount_usd, reference }
-      });
+        const reference = `${operator.toUpperCase()}${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        
+        const payment = await pool.query(
+            `INSERT INTO payments (student_id, student_name, amount, operator, reference, phone_number, description, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'completed')
+             RETURNING *`,
+            [studentId, studentName, amount, operator, reference, phoneNumber, description]
+        );
+        
+        // Mettre à jour le montant payé de l'étudiant
+        await pool.query(
+            `UPDATE students 
+             SET paid_amount = paid_amount + $1
+             WHERE id = $2`,
+            [amount, studentId]
+        );
+        
+        res.json({ 
+            success: true, 
+            message: 'Paiement effectué avec succès',
+            payment: payment.rows[0] 
+        });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Erreur serveur' });
+        console.error('❌ Erreur paiement:', error);
+        res.status(500).json({ error: 'Erreur lors du paiement', details: error.message });
     }
-  },
-
-  // Historique des transactions
-  getHistory: async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const { limit = 50, offset = 0 } = req.query;
-
-      const result = await pool.query(
-        `SELECT * FROM transactions 
-         WHERE user_id = $1 
-         ORDER BY created_at DESC 
-         LIMIT $2 OFFSET $3`,
-        [userId, limit, offset]
-      );
-
-      res.json({
-        success: true,
-        data: result.rows
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Erreur serveur' });
-    }
-  }
 };
 
-module.exports = paymentController;
+// Historique des paiements
+exports.getHistory = async (req, res) => {
+    const { limit = 50, offset = 0 } = req.query;
+    
+    try {
+        const payments = await pool.query(
+            `SELECT p.*, s.matricule, s.class_name
+             FROM payments p
+             LEFT JOIN students s ON p.student_id = s.id
+             ORDER BY p.payment_date DESC
+             LIMIT $1 OFFSET $2`,
+            [parseInt(limit), parseInt(offset)]
+        );
+        
+        res.json(payments.rows);
+    } catch (error) {
+        console.error('❌ Erreur historique:', error);
+        res.status(500).json({ error: 'Erreur lors du chargement de l\'historique' });
+    }
+};
+
+// Statistiques des paiements
+exports.getStats = async (req, res) => {
+    try {
+        const stats = await pool.query(
+            `SELECT 
+                operator,
+                COUNT(*) as total_payments,
+                SUM(amount) as total_amount,
+                DATE(payment_date) as date
+             FROM payments
+             GROUP BY operator, DATE(payment_date)
+             ORDER BY date DESC
+             LIMIT 30`
+        );
+        
+        res.json(stats.rows);
+    } catch (error) {
+        console.error('❌ Erreur statistiques:', error);
+        res.status(500).json({ error: 'Erreur lors du chargement des statistiques' });
+    }
+};
