@@ -1,17 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const classController = require('../controllers/classController');
 const auth = require('../middleware/auth');
-const pool = require('../database/db');
+const isAdmin = require('../middleware/isAdmin');
 
-// Récupérer toutes les classes
-router.get('/', auth, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM classes ORDER BY level');
-        res.json(result.rows);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erreur lors du chargement des classes' });
-    }
-});
+// Routes accessibles à tous les utilisateurs authentifiés (pour l'affichage)
+router.get('/', auth, classController.getAllClasses);
+
+// Routes admin
+router.post('/', auth, isAdmin, classController.createClass);
+router.put('/:id', auth, isAdmin, classController.updateClass);
+router.delete('/:id', auth, isAdmin, classController.deleteClass);
 
 module.exports = router;
