@@ -1,12 +1,15 @@
 const express = require('express');
-const authMiddleware = require('../middleware/auth');
-const paymentController = require('../controllers/paymentController'); // Note: P majuscule
-
 const router = express.Router();
+const paymentController = require('../controllers/paymentController');
+const auth = require('../middleware/auth');
 
-// Routes de paiement
-router.post('/', authMiddleware, paymentController.createPayment); // createPayment, pas makePayment
-router.get('/history', authMiddleware, paymentController.getHistory);
-router.get('/stats', authMiddleware, paymentController.getStats);
+router.post('/', auth, paymentController.createPayment);
+router.get('/history', auth, paymentController.getHistory);
+router.get('/stats', auth, paymentController.getStats);
+router.get('/students', auth, paymentController.getStudents);
+router.get('/payment-types', auth, paymentController.getPaymentTypes);
+router.get('/receipt/:paymentId', auth, paymentController.getReceipt);
+router.get('/notifications', auth, paymentController.getNotifications);
+router.put('/notifications/:id', auth, paymentController.markNotificationRead);
 
 module.exports = router;
