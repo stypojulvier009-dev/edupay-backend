@@ -7,13 +7,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connexion directe à la base de données
+// Connexion à PostgreSQL
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// Route d'inscription directe
+// Route de test
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        message: 'EduPay API is running',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Route racine
+app.get('/', (req, res) => {
+    res.json({ 
+        name: 'EduPay API', 
+        version: '1.0.0',
+        status: 'online'
+    });
+});
+
+// Inscription
 app.post('/api/auth/register', async (req, res) => {
     const { name, phone, password, matricule } = req.body;
     
@@ -21,8 +39,20 @@ app.post('/api/auth/register', async (req, res) => {
         const bcrypt = require('bcryptjs');
         const jwt = require('jsonwebtoken');
         
+        // Vérifier si l'utilisateur existe
+        const existing = await pool.query(
+            'SELECT * FROM users WHERE phone = $1',
+            [phone]
+        );
+        
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ error: 'Ce numéro est déjà utilisé' });
+        }
+        
+        // Hasher le mot de passe
         const hashedPassword = await bcrypt.hash(password, 10);
         
+        // Créer l'utilisateur
         const result = await pool.query(
             `INSERT INTO users (name, phone, pin_hash, matricule) 
              VALUES ($1, $2, $3, $4) 
@@ -30,20 +60,25 @@ app.post('/api/auth/register', async (req, res) => {
             [name, phone, hashedPassword, matricule || null]
         );
         
+        // Générer le token
         const token = jwt.sign(
             { id: result.rows[0].id },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
         
-        res.json({ success: true, token, user: result.rows[0] });
+        res.json({ 
+            success: true, 
+            token, 
+            user: result.rows[0] 
+        });
     } catch (error) {
-        console.error(error);
+        console.error('Register error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Route de connexion directe
+// Connexion
 app.post('/api/auth/login', async (req, res) => {
     const { phone, password } = req.body;
     
@@ -73,56 +108,23 @@ app.post('/api/auth/login', async (req, res) => {
             { expiresIn: '7d' }
         );
         
-        res.json({ success: true, token, user: { id: user.id, name: user.name, phone: user.phone } });
+        res.json({ 
+            success: true, 
+            token, 
+            user: { 
+                id: user.id, 
+                name: user.name, 
+                phone: user.phone,
+                matricule: user.matricule
+            } 
+        });
     } catch (error) {
-        console.error(error);
+        console.error('Login error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'EduPay API is running' });
-});
-
-app.get('/', (req, res) => {
-    res.json({ name: 'EduPay API', version: '1.0.0' });
-});
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-    console.log(`✅ Server running on port ${PORT}`);
-});require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-// Routes
-const authRoutes = require('./routes/authRoutes');
-
-app.use('/api/auth', authRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
-        message: 'EduPay API is running',
-        timestamp: new Date().toISOString()
-    });
-});
-
-app.get('/', (req, res) => {
-    res.json({ 
-        name: 'EduPay API', 
-        version: '1.0.0',
-        status: 'online'
-    });
-});
-
+// Démarrer le serveur
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`✅ Serveur EduPay démarré sur le port ${PORT}`);
