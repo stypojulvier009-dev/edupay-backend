@@ -7,10 +7,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connexion à PostgreSQL
+// Configuration PostgreSQL - utiliser DATABASE_URL directement
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
+
+// Tester la connexion
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('❌ Erreur de connexion à PostgreSQL:', err.message);
+    } else {
+        console.log('✅ Connecté à PostgreSQL sur Neon');
+        release();
+    }
 });
 
 // Route de test
@@ -18,7 +30,7 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         message: 'EduPay API is running',
-        timestamp: new Date().toISOString()
+        database: process.env.DATABASE_URL ? 'configured' : 'missing'
     });
 });
 
@@ -62,7 +74,7 @@ app.post('/api/auth/register', async (req, res) => {
         
         // Générer le token
         const token = jwt.sign(
-            { id: result.rows[0].id },
+            { id: result.rows[0].id, phone: phone },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -103,7 +115,7 @@ app.post('/api/auth/login', async (req, res) => {
         }
         
         const token = jwt.sign(
-            { id: user.id },
+            { id: user.id, phone: phone },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -124,8 +136,8 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-// Démarrer le serveur
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`✅ Serveur EduPay démarré sur le port ${PORT}`);
+    console.log(`📊 Base de données: ${process.env.DATABASE_URL ? 'configurée' : 'MANQUANTE'}`);
 });
