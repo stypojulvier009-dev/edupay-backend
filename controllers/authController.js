@@ -5,13 +5,11 @@ const User = require('../models/User');
 exports.register = async (req, res) => {
     const { name, phone, password, matricule } = req.body;
     try {
-        // Vérifier si le téléphone existe déjà
         const existingUser = await User.findByPhone(phone);
         if (existingUser) {
             return res.status(400).json({ error: 'Ce numéro est déjà utilisé' });
         }
 
-        // Vérifier le matricule s'il est fourni
         if (matricule && matricule.trim() !== '') {
             const existingMatricule = await User.findByMatricule(matricule.trim());
             if (existingMatricule) {
@@ -19,10 +17,8 @@ exports.register = async (req, res) => {
             }
         }
 
-        // Hasher le PIN
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Créer l'utilisateur
         const user = await User.create({
             name,
             phone,
@@ -31,7 +27,6 @@ exports.register = async (req, res) => {
             role: 'parent'
         });
 
-        // Générer le token JWT
         const token = jwt.sign(
             { id: user.id, phone: user.phone, name: user.name, role: user.role },
             process.env.JWT_SECRET,
@@ -51,7 +46,6 @@ exports.register = async (req, res) => {
         });
     } catch (error) {
         console.error('Register error:', error);
-        // Gestion des doublons PostgreSQL
         if (error.code === '23505') {
             if (error.constraint === 'users_matricule_key') {
                 return res.status(400).json({ error: 'Ce matricule est déjà utilisé' });
