@@ -367,6 +367,8 @@ class RapportFinancier(BaseModel):
     evolution_mensuelle: List[dict]
 
 # Aliases pour compatibilite avec les routers
+Commune = CommuneOut
+Quartier = QuartierOut
 Abonnement = AbonnementOut
 Souscription = SouscriptionOut
 Ecole = EcoleOut
