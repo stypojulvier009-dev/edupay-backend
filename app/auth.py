@@ -49,3 +49,11 @@ def require_admin(current_user=Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Acces admin requis")
     return current_user
+
+# Alias pour compatibilite
+get_password_hash = hash_password
+
+def get_current_super_admin(current_user=Depends(get_current_user)):
+    if current_user.role not in ["super_admin", "admin_ecole", "directeur"]:
+        raise HTTPException(status_code=403, detail="Acces administrateur requis")
+    return current_user
