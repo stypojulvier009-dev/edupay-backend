@@ -7,7 +7,7 @@ from ..database import get_db
 
 router = APIRouter(prefix='/api/auth', tags=['Authentification'])
 
-@router.post('/register', response_model=schemas.Utilisateur)
+@router.post('/register', response_model=schemas.UtilisateurOut)
 def register(
     user: schemas.UtilisateurCreate,
     db: Session = Depends(get_db)
@@ -64,13 +64,13 @@ def login(
         }
     }
 
-@router.get('/me', response_model=schemas.Utilisateur)
+@router.get('/me', response_model=schemas.UtilisateurOut)
 def get_current_user_info(
     current_user: models.Utilisateur = Depends(auth.get_current_user)
 ):
     return current_user
 
-@router.put('/me', response_model=schemas.Utilisateur)
+@router.put('/me', response_model=schemas.UtilisateurOut)
 def update_current_user(
     user_update: schemas.UtilisateurCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
