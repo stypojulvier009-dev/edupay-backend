@@ -6,11 +6,11 @@ from ..database import get_db
 
 router = APIRouter(prefix='/api/abonnements', tags=['Abonnements'])
 
-@router.get('/', response_model=List[schemas.Abonnement])
+@router.get('/', response_model=List[schemas.AbonnementOut])
 def get_abonnements(db: Session = Depends(get_db)):
     return db.query(models.Abonnement).filter(models.Abonnement.actif == True).all()
 
-@router.post('/souscrire', response_model=schemas.Souscription)
+@router.post('/souscrire', response_model=schemas.SouscriptionOut)
 def souscrire(
     souscription: schemas.SouscriptionCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -29,7 +29,7 @@ def souscrire(
     db.refresh(db_souscription)
     return db_souscription
 
-@router.get('/ma-souscription', response_model=schemas.Souscription)
+@router.get('/ma-souscription', response_model=schemas.SouscriptionOut)
 def get_ma_souscription(
     current_user: models.Utilisateur = Depends(auth.get_current_user),
     db: Session = Depends(get_db)

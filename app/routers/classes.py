@@ -6,7 +6,7 @@ from ..database import get_db
 
 router = APIRouter(prefix='/api/classes', tags=['Classes'])
 
-@router.post('/', response_model=schemas.Classe)
+@router.post('/', response_model=schemas.ClasseOut)
 def create_classe(
     classe: schemas.ClasseCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -21,14 +21,14 @@ def create_classe(
     db.refresh(db_classe)
     return db_classe
 
-@router.get('/', response_model=List[schemas.Classe])
+@router.get('/', response_model=List[schemas.ClasseOut])
 def get_classes(
     current_user: models.Utilisateur = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
     return db.query(models.Classe).filter(models.Classe.ecole_id == current_user.ecole_id).all()
 
-@router.get('/{classe_id}', response_model=schemas.Classe)
+@router.get('/{classe_id}', response_model=schemas.ClasseOut)
 def get_classe(
     classe_id: int,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -42,7 +42,7 @@ def get_classe(
         raise HTTPException(404, 'Classe introuvable')
     return classe
 
-@router.put('/{classe_id}', response_model=schemas.Classe)
+@router.put('/{classe_id}', response_model=schemas.ClasseOut)
 def update_classe(
     classe_id: int,
     classe_update: schemas.ClasseCreate,

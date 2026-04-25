@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from . import models, schemas, auth
-from .database import get_db
+from .. import models, schemas, auth
+from ..database import get_db
 
 router = APIRouter(prefix='/api/etudiants', tags=['Étudiants'])
 
-@router.post('/', response_model=schemas.Etudiant)
+@router.post('/', response_model=schemas.EtudiantOut)
 def create_etudiant(
     etudiant: schemas.EtudiantCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -21,7 +21,7 @@ def create_etudiant(
     db.refresh(db_etudiant)
     return db_etudiant
 
-@router.get('/', response_model=List[schemas.Etudiant])
+@router.get('/', response_model=List[schemas.EtudiantOut])
 def get_etudiants(
     classe_id: int = None,
     skip: int = 0,
@@ -34,7 +34,7 @@ def get_etudiants(
         query = query.filter(models.Etudiant.classe_id == classe_id)
     return query.offset(skip).limit(limit).all()
 
-@router.get('/{etudiant_id}', response_model=schemas.Etudiant)
+@router.get('/{etudiant_id}', response_model=schemas.EtudiantOut)
 def get_etudiant(
     etudiant_id: int,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -48,7 +48,7 @@ def get_etudiant(
         raise HTTPException(404, 'Étudiant introuvable')
     return etudiant
 
-@router.put('/{etudiant_id}', response_model=schemas.Etudiant)
+@router.put('/{etudiant_id}', response_model=schemas.EtudiantOut)
 def update_etudiant(
     etudiant_id: int,
     etudiant_update: schemas.EtudiantCreate,

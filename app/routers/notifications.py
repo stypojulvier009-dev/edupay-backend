@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from . import models, schemas, auth
-from .database import get_db
+from .. import models, schemas, auth
+from ..database import get_db
 
 router = APIRouter(prefix='/api/notifications', tags=['Notifications'])
 
-@router.post('/', response_model=schemas.Notification)
+@router.post('/', response_model=schemas.NotificationOut)
 def create_notification(
     notification: schemas.NotificationCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -21,7 +21,7 @@ def create_notification(
     db.refresh(db_notification)
     return db_notification
 
-@router.get('/', response_model=List[schemas.Notification])
+@router.get('/', response_model=List[schemas.NotificationOut])
 def get_notifications(
     skip: int = 0,
     limit: int = 50,

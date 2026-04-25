@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
-from . import models, schemas, auth
-from .database import get_db
+from .. import models, schemas, auth
+from ..database import get_db
 
 router = APIRouter(prefix='/api/rapports', tags=['Rapports'])
 
-@router.post('/generer', response_model=schemas.Rapport)
+@router.post('/generer', response_model=schemas.RapportFinancier)
 def generer_rapport(
     rapport: schemas.RapportCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -26,7 +26,7 @@ def generer_rapport(
     db.refresh(db_rapport)
     return db_rapport
 
-@router.get('/', response_model=List[schemas.Rapport])
+@router.get('/', response_model=List[schemas.RapportFinancier])
 def get_rapports(
     skip: int = 0,
     limit: int = 50,

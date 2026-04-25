@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from . import models, schemas, auth
-from .database import get_db
+from .. import models, schemas, auth
+from ..database import get_db
 
 router = APIRouter(prefix='/api/audit', tags=['Audit'])
 
-@router.post('/', response_model=schemas.AuditLog)
+@router.post('/', response_model=schemas.UtilisateurOut)
 def create_audit_log(
     log: schemas.AuditLogCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -22,7 +22,7 @@ def create_audit_log(
     db.refresh(db_log)
     return db_log
 
-@router.get('/', response_model=List[schemas.AuditLog])
+@router.get('/', response_model=List[schemas.UtilisateurOut])
 def get_audit_logs(
     action: str = None,
     skip: int = 0,

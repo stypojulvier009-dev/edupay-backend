@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
-from . import models, schemas, auth
-from .database import get_db
+from .. import models, schemas, auth
+from ..database import get_db
 
 router = APIRouter(prefix='/api/paiements', tags=['Paiements'])
 
-@router.post('/', response_model=schemas.Paiement)
+@router.post('/', response_model=schemas.PaiementOut)
 def create_paiement(
     paiement: schemas.PaiementCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -39,7 +39,7 @@ def create_paiement(
     
     return db_paiement
 
-@router.get('/', response_model=List[schemas.Paiement])
+@router.get('/', response_model=List[schemas.PaiementOut])
 def get_paiements(
     etudiant_id: int = None,
     date_debut: str = None,
@@ -60,7 +60,7 @@ def get_paiements(
     
     return query.order_by(models.Paiement.date_paiement.desc()).offset(skip).limit(limit).all()
 
-@router.get('/{paiement_id}', response_model=schemas.Paiement)
+@router.get('/{paiement_id}', response_model=schemas.PaiementOut)
 def get_paiement(
     paiement_id: int,
     current_user: models.Utilisateur = Depends(auth.get_current_user),

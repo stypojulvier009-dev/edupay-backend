@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from . import models, schemas, auth
-from .database import get_db
+from .. import models, schemas, auth
+from ..database import get_db
 
 router = APIRouter(prefix='/api/frais', tags=['Frais Scolaires'])
 
-@router.post('/', response_model=schemas.FraisScolaire)
+@router.post('/', response_model=schemas.FraisScolaireOut)
 def create_frais(
     frais: schemas.FraisScolaireCreate,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -21,7 +21,7 @@ def create_frais(
     db.refresh(db_frais)
     return db_frais
 
-@router.get('/', response_model=List[schemas.FraisScolaire])
+@router.get('/', response_model=List[schemas.FraisScolaireOut])
 def get_frais(
     classe_id: int = None,
     current_user: models.Utilisateur = Depends(auth.get_current_user),
@@ -32,7 +32,7 @@ def get_frais(
         query = query.filter(models.FraisScolaire.classe_id == classe_id)
     return query.all()
 
-@router.put('/{frais_id}', response_model=schemas.FraisScolaire)
+@router.put('/{frais_id}', response_model=schemas.FraisScolaireOut)
 def update_frais(
     frais_id: int,
     frais_update: schemas.FraisScolaireCreate,
