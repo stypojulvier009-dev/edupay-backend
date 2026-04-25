@@ -10,13 +10,18 @@ from .routers import (
     admin_utilisateurs, presences, journal_cours, examens, admin_cahier
 )
 
-models.Base.metadata.create_all(bind=engine)
-
 app = FastAPI(
     title="EduPay API - Oasis des Juniors",
     description="API complete de gestion scolaire et paiements - Complexe Scolaire Oasis des Juniors",
     version="2.0.0",
 )
+
+@app.on_event("startup")
+def startup():
+    try:
+        models.Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"DB init warning: {e}")
 
 # Middleware verification Internet (OBLIGATOIRE)
 app.add_middleware(InternetCheckMiddleware)
