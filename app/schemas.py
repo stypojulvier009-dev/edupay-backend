@@ -365,3 +365,22 @@ class RapportFinancier(BaseModel):
     benefice_net: float
     paiements_par_methode: dict
     evolution_mensuelle: List[dict]
+
+# Aliases pour compatibilite avec les routers
+Abonnement = AbonnementOut
+Souscription = SouscriptionOut
+Ecole = EcoleOut
+Utilisateur = UtilisateurOut
+Classe = ClasseOut
+Parent = ParentOut
+Etudiant = EtudiantOut
+FraisScolaire = FraisScolaireOut
+Echeancier = EcheancierOut
+Tranche = TrancheOut
+Paiement = PaiementOut
+Notification = NotificationOut
+Rapport = RapportFinancier
+AuditLog = UtilisateurOut
+RapportCreate = RapportFinancier
+AuditLogCreate = UtilisateurCreate
+TrancheCreate = EcheancierCreate
