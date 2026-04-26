@@ -7,26 +7,13 @@ from ..database import get_db
 
 router = APIRouter(prefix='/api/auth', tags=['Authentification'])
 
-@router.post('/register', response_model=schemas.UtilisateurOut)
-def register(
-    user: schemas.UtilisateurCreate,
-    db: Session = Depends(get_db)
-):
-    db_user = db.query(models.Utilisateur).filter(
-        models.Utilisateur.email == user.email
-    ).first()
-    if db_user:
-        raise HTTPException(400, 'Email déjà enregistré')
-    
-    hashed_password = auth.get_password_hash(user.mot_de_passe)
-    db_user = models.Utilisateur(
-        **user.dict(exclude={'mot_de_passe'}),
-        mot_de_passe_hash=hashed_password
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+# ========== INSCRIPTION PUBLIQUE DÉSACTIVÉE ==========
+# On commente ou supprime l'endpoint /register
+# Si vous voulez absolument le garder pour un usage interne, ajoutez une dépendance admin.
+
+# @router.post('/register', response_model=schemas.UtilisateurOut)
+# def register(...):
+#     ...
 
 @router.post('/login')
 def login(
@@ -85,3 +72,77 @@ def update_current_user(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+# ========== ENDPOINTS ADMIN POUR GÉRER LES UTILISATEURS ==========
+# Fonction de vérification du rôle super admin
+def require_super_admin(current_user: models.Utilisateur = Depends(auth.get_current_user)):
+    if current_user.role != models.RoleEnum.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Accès réservé au super administrateur")
+    return current_user
+
+@router.post('/admin/create-user')
+def create_user_by_admin(
+    user_data: schemas.UtilisateurCreate,
+    db: Session = Depends(get_db),
+    _=Depends(require_super_admin)
+):
+    # Vérifier si l'email existe déjà
+    existing = db.query(models.Utilisateur).filter(models.Utilisateur.email == user_data.email).first()
+    if existing:
+        raise HTTPException(400, "Un utilisateur avec cet email existe déjà")
+    
+    hashed = auth.get_password_hash(user_data.mot_de_passe)
+    new_user = models.Utilisateur(
+        nom=user_data.nom,
+        prenom=user_data.prenom,
+        email=user_data.email,
+        telephone=user_data.telephone,
+        mot_de_passe_hash=hashed,
+        role=user_data.role,
+        ecole_id=user_data.ecole_id,
+        actif=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return {"message": f"Utilisateur {new_user.email} créé", "user": new_user}
+
+@router.delete('/admin/delete-user/{user_id}')
+def delete_user_by_admin(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_super_admin)
+):
+    user = db.query(models.Utilisateur).filter(models.Utilisateur.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "Utilisateur non trouvé")
+    # Empêcher la suppression de son propre compte (optionnel)
+    # if user.email == "stypojulvier009@mail.com":
+    #     raise HTTPException(400, "Vous ne pouvez pas supprimer votre propre compte")
+    db.delete(user)
+    db.commit()
+    return {"message": f"Utilisateur {user.email} supprimé"}
+
+@router.put('/admin/block-user/{user_id}')
+def block_user_by_admin(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_super_admin)
+):
+    user = db.query(models.Utilisateur).filter(models.Utilisateur.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "Utilisateur non trouvé")
+    user.actif = not user.actif
+    db.commit()
+    status = "bloqué" if not user.actif else "débloqué"
+    return {"message": f"Utilisateur {user.email} {status}"}
+
+@router.post('/admin/logout-user/{user_id}')
+def logout_user_by_admin(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_super_admin)
+):
+    # Implémenter la révocation de token si nécessaire (nécessite stockage des tokens)
+    # Pour l'instant, simple message.
+    return {"message": f"Déconnexion forcée demandée pour l'utilisateur {user_id}"}
